@@ -114,6 +114,9 @@ function echoRespnse($status_code, $response) {
     echo json_encode($response);
 }
 
+
+
+
 /**
  * Adding Middle Layer to authenticate every request
  * Checking if the request has valid api key in the 'Authorization' header
