@@ -20,6 +20,8 @@ function verifyRequiredParams($required_fields) {
     $request_params = array();
     $request_params = $_REQUEST;
 	
+    
+    
 	// Handling PUT request params
     if ($_SERVER['REQUEST_METHOD'] == 'PUT') {
         $app = \Slim\Slim::getInstance();
