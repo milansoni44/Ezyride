@@ -2,7 +2,7 @@
 
 
 <!--body wrapper start-->
-<div class="wrapper">
+<!--<div class="wrapper">
     <div class="row states-info">
         <div class="col-md-3">
             <div class="panel red-bg">
@@ -493,7 +493,7 @@
             </div>
         </div>
     </div>
-</div>
+</div>-->
 <!--body wrapper end-->
 
 <?php $this->load->view('layout/footer'); ?>
