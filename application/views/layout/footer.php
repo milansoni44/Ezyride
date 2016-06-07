@@ -1,6 +1,6 @@
 <!--footer section start-->
 <footer>
-    2014 &copy; AdminEx by ThemeBucket
+    2016 &copy; Ezyride Admin by Vakratundasystem
 </footer>
 <!--footer section end-->
 
