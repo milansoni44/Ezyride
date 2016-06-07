@@ -29,6 +29,7 @@
                                     <th>Contact</th>
                                     <th>Corporate Email</th>
                                     <th>Api Key</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -40,6 +41,7 @@
                                     <td><?php echo $cust_detail->contact; ?></td>
                                     <td><?php echo $cust_detail->corp_email; ?></td>
                                     <td><?php echo $cust_detail->api_key; ?></td>
+                                    <td><a href="<?php echo base_url("customers/view"); ?>/<?php echo $cust_detail->id; ?>">View</a> | <a href="<?php echo base_url("customers/deactivate"); ?>/<?php echo $cust_detail->id; ?>" onclick="return confirm('Are you sure you want to deactivate user?');">Deativate</a></td>
                                 </tr>
                                <?php } } ?>
                             </tbody>
@@ -50,6 +52,7 @@
                                     <th>Contact</th>
                                     <th>Corporate Email</th>
                                     <th>Api Key</th>
+                                    <th>Action</th>
                                 </tr>
                             </tfoot>
                         </table>

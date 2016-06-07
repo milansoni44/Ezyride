@@ -19,4 +19,8 @@ class Customer_model extends CI_Model
 		return false;
 		}
 	}
+
+	public function get_customer_by_id($id = NULL){
+		return $this->db->get_where('customers',array('id'=>$id))->row();
+	}
 }

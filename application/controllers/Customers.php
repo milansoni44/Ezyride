@@ -20,4 +20,14 @@ class Customers extends CI_Controller
         $this->data['result'] = $this->customer_model->get_customers_detail();
         $this->load->view('customers/index',  $this->data);
     }
+
+    public function view($id = NULL){
+        $this->data['title'] = 'Application User View';
+        if($id){
+            $customer = $this->customer_model->get_customer_by_id($id);
+            $this->load->view('customers/view',  $this->data);
+        }else{
+            show_404();
+        }
+    }
 }
