@@ -103,7 +103,7 @@
                             } ?>"><a href="<?php echo base_url('auth/create_user'); ?>"> Add New User</a></li>
                             </ul>
                         </li>
-
+                        <li class="<?php if ($title == 'Application Users') { echo 'active'; } ?>"><a href="<?php echo base_url('customers'); ?>"> <i class="fa fa-laptop"></i>App User List</a></li>
                         <li class="<?php
                             if ($title == 'Car Details') {
                                 echo 'active';
