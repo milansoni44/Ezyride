@@ -30,4 +30,24 @@ class Customers extends CI_Controller
             show_404();
         }
     }
+
+    public function deactivate($id = NULL){
+        if($id){
+            if($this->customer_model->deactivate($id)){
+                redirect('customers','refresh');
+            }
+        }else{
+            show_404();
+        }
+    }
+
+    public function activate($id = NULL){
+        if($id){
+            if($this->customer_model->activate($id)){
+                redirect('customers','refresh');
+            }
+        }else{
+            show_404();
+        }
+    }
 }
