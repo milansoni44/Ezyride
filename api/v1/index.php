@@ -42,7 +42,7 @@ function verifyRequiredParams($required_fields) {
         $app = \Slim\Slim::getInstance();
         $response["error"] = true;
         $response["message"] = 'Required field(s) ' . substr($error_fields, 0, -2) . ' is missing or empty';
-        echoRespnse(400, $response);
+        echoRespnse(200, $response);
         $app->stop();
     }
 }
@@ -55,7 +55,7 @@ function validateEmail($email) {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $response["error"] = true;
         $response["message"] = 'Email address is not valid';
-        echoRespnse(400, $response);
+        echoRespnse(200, $response);
         $app->stop();
     }
 }
@@ -65,32 +65,32 @@ function validateEmail($email) {
  * @return mixed
  * @throws \Slim\Exception\Stop
  */
-function pan_upload($file = array()) {
+function pan_upload($file = array(),$file_name = NULL) {
     $app = \Slim\Slim::getInstance();
     $dir = dirname(dirname(dirname(__FILE__))) . "/assets/uploads/";
 
     $errors = array();
-    $file_name = $file['name'];
+//    $file_name = $file['name'];
     $file_size = $file['size'];
     $file_tmp = $file['tmp_name'];
     $file_type = $file['type'];
     $explode = explode('.', $file_name);
     $file_ext = strtolower(end($explode));
 
-    $expensions = array("jpeg", "jpg", "png");
+//    $expensions = array("jpeg", "jpg", "png");
     $response = array();
 
-    if (in_array($file_ext, $expensions) === false) {
-        $response["error"] = true;
-        $response["message"] = "extension not allowed, please choose a JPEG or PNG file.";
-        echoRespnse(401, $response);
-        $app->stop();
-    }
+//    if (in_array($file_ext, $expensions) === false) {
+//        $response["error"] = true;
+//        $response["message"] = "extension not allowed, please choose a JPEG or PNG file.";
+//        echoRespnse(200, $response);
+//        $app->stop();
+//    }
 
     if ($file_size > 2097152) {
         $response["error"] = true;
         $response["message"] = "File size must be excately 2 MB";
-        echoRespnse(401, $response);
+        echoRespnse(200, $response);
         $app->stop();
     }
 
@@ -116,6 +116,42 @@ function echoRespnse($status_code, $response) {
     echo json_encode($response);
 }
 
+function authenticate1(\Slim\Route $route) {
+    // Getting request headers
+    $headers = apache_request_headers();
+    $response = array();
+    $app = \Slim\Slim::getInstance();
+
+    // Verifying Authorization Header
+    if (isset($headers['Authorization'])) {
+        $db = new DbHandler();
+
+        // get the api key
+        $api_key = $headers['Authorization'];
+        // validating api key
+        //if (!$db->isValidApiKey($api_key)) {
+        if($api_key != "harsh"){
+            // api key is not present in users table
+            $response["error"] = true;
+            $response["message"] = "Access Denied. Invalid Api key";
+            echoRespnse(200, $response);
+            $app->stop();
+        } else {
+            global $user_id;
+            // get user primary key id
+//            $user = $db->getUserId($api_key);
+//            if ($user != NULL)
+                $user_id = 15;//$user["id"];
+        }
+    } else {
+        // api key is missing in header
+        $response["error"] = true;
+        $response["message"] = "Api key is misssing";
+        echoRespnse(200, $response);
+        $app->stop();
+    }
+}
+
 /**
  * Adding Middle Layer to authenticate every request
  * Checking if the request has valid api key in the 'Authorization' header
@@ -137,7 +173,7 @@ function authenticate(\Slim\Route $route) {
             // api key is not present in users table
             $response["error"] = true;
             $response["message"] = "Access Denied. Invalid Api key";
-            echoRespnse(401, $response);
+            echoRespnse(200, $response);
             $app->stop();
         } else {
             global $user_id;
@@ -150,7 +186,7 @@ function authenticate(\Slim\Route $route) {
         // api key is missing in header
         $response["error"] = true;
         $response["message"] = "Api key is misssing";
-        echoRespnse(400, $response);
+        echoRespnse(200, $response);
         $app->stop();
     }
 }
@@ -165,9 +201,9 @@ $app->hook('slim.before', function () use ($app) {
  * method - POST
  * params - name, email, password
  */
-$app->post('/register', function() use ($app) {
+$app->post('/register',function() use ($app) {
     // check for required params
-    verifyRequiredParams(array('first_name', 'last_name', 'email', 'contact', 'password'));
+    verifyRequiredParams(array('first_name', 'last_name', 'email', 'contact'));
 
     $response = array();
 
@@ -175,18 +211,23 @@ $app->post('/register', function() use ($app) {
     $fname = $app->request->post('first_name');
     $lname = $app->request->post('last_name');
     $email = $app->request->post('email');
-    $password = $app->request->post('password');
+//    $password = $app->request->post('password');
     $contact = $app->request->post('contact');
     $date = $app->request->post('dob');
     $dob = date('Y-m-d', strtotime($date));
     $gender = $app->request->post('gender');
-    $corp_email = $app->request->post('corp_email');
     $created_at = date('Y-m-d H:m:s');
     // validating email address
-    validateEmail($email);
-    validateEmail($corp_email);
+    //validateEmail($email);
 
     $db = new DbHandler();
+
+    if($db->isPhoneExists($contact)){
+        $response["error"] = true;
+        $response["message"] = "Sorry, this phone already existed";
+        echoRespnse(200, $response);
+        $app->stop();
+    }
 
     if ($db->isUserExists($email)) {
         $response["error"] = true;
@@ -195,26 +236,76 @@ $app->post('/register', function() use ($app) {
         $app->stop();
     }
 
-    $file_name = '';
-    if (isset($_FILES['pan'])) {
-        $file_name = pan_upload($_FILES['pan']);
-    }
-
-    $res = $db->createUser($fname, $lname, $email, $contact, $password, $file_name, $dob, $gender, $corp_email, $created_at);
+    $res = $db->createUser($fname, $lname, $email, $contact, $dob, $gender, $created_at);
 
     if ($res == USER_CREATED_SUCCESSFULLY) {
+        $user = $db->getUserByEmail($email);
         $response["error"] = false;
-        $response["message"] = "You are successfully registered";
-        echoRespnse(201, $response);
+        $response["status"] = true;
+        $response['fname'] = $user['first_name'];
+        $response['lname'] = $user['last_name'];
+        $response['email'] = $user['email'];
+        $response['mobile'] = $user['contact'];
+        $response['apiKey'] = $user['api_key'];
+        $response["message"] = "You are successfully registered, please verify your mobile number.";
+        echoRespnse(200, $response);
     } else if ($res == USER_CREATE_FAILED) {
         $response["error"] = true;
         $response["message"] = "Oops! An error occurred while registereing";
         echoRespnse(200, $response);
     } else if ($res == USER_ALREADY_EXISTED) {
-        $response["error"] = true;
-        $response["message"] = "Sorry, this email already existed";
-        echoRespnse(200, $response);
+        if($db->checkStatus($email) == 0){
+            $response["error"] = false;
+            $response["status"] = false;
+            $response["message"] = "Sorry, this email already existed, please verify your mobile number";
+            echoRespnse(200, $response);
+        }else{
+            $response["error"] = true;
+            $response["message"] = "Sorry, this email already existed";
+            echoRespnse(200, $response);
+        }
     }
+});
+
+/**
+ * verify otp
+ * url - /very_otp
+ * method - POST
+ * params - user_id, otp
+ */
+$app->post('/verify_otp','authenticate', function() use($app){
+    global $user_id;
+    $response = array();
+    //check for required params
+    verifyRequiredParams(array('otp'));
+    $otp = $app->request->post('otp');
+
+    $db = new DbHandler();
+    if($db->activateUser($user_id, $otp)){
+        $response["error"] = false;
+        $response["message"] = "User successfully activated";
+    }else{
+        $response["error"] = true;
+        $response["message"] = "Oops! something went wrong.";
+    }
+    echoRespnse(200,$response);
+});
+
+$app->post('/resend_otp',function() use($app){
+    //check for required params
+    verifyRequiredParams(array(' '));
+    $response = array();
+    $phone = $app->request->post('phone');
+
+    $db = new DbHandler();
+    if($db->resendOTP($phone)){
+        $response["error"] = false;
+        $response["message"] = "OTP send successfully";
+    }else{
+        $response["error"] = true;
+        $response["message"] = "Error while sending otp";
+    }
+    echoRespnse(200,$response);
 });
 
 /**
@@ -243,6 +334,7 @@ $app->post('/login', function() use ($app) {
             $response['fname'] = $user['first_name'];
             $response['lname'] = $user['last_name'];
             $response['email'] = $user['email'];
+            $response['mobile'] = $user['contact'];
             $response['apiKey'] = $user['api_key'];
             $response['createdAt'] = $user['created_at'];
         } else {
@@ -282,11 +374,11 @@ $app->post('/rides', 'authenticate', function () use ($app) {
     if ($res) {
         $response['error'] = false;
         $response['message'] = 'Rides create successful.';
-        echoRespnse(201, $response);
+        echoRespnse(200, $response);
     } else {
         $response['error'] = true;
         $response['message'] = 'Erro while create rides.';
-        echoRespnse(401, $response);
+        echoRespnse(200, $response);
     }
 });
 
@@ -323,7 +415,7 @@ $app->get('/rides/:id', 'authenticate', function($rides_id) {
     } else {
         $responses['error'] = true;
         $responses['message'] = 'No Data Found';
-        echoRespnse(401, $responses);
+        echoRespnse(200, $responses);
     }
 });
 
@@ -341,6 +433,7 @@ $app->delete('/rides/:id', 'authenticate', function($rides_id) {
     } else {
         $response['error'] = TRUE;
         $response['message'] = 'Ride Not Deleted.';
+        echoRespnse(200, $response);
     }
 });
 
@@ -409,7 +502,7 @@ $app->post('/car', 'authenticate', function() use($app) {
     } else {
         $response["error"] = true;
         $response["message"] = "Error while inserting car";
-        echoRespnse(401, $response);
+        echoRespnse(200, $response);
     }
 });
 
@@ -446,7 +539,7 @@ $app->get('/car/:id', 'authenticate', function($car_id) use($app) {
     } else {
         $response["error"] = true;
         $response["message"] = "The requested resource doesn't exists";
-        echoRespnse(400, $response);
+        echoRespnse(200, $response);
     }
 });
 
@@ -524,12 +617,13 @@ $app->post('/car/:id', 'authenticate', function($car_id) use($app) {
         // task updated successfully
         $response["error"] = false;
         $response["message"] = "Car updated successfully";
+        echoRespnse(200, $response);
     } else {
         // task failed to update
         $response["error"] = true;
         $response["message"] = "Car failed to update. Please try again!";
+        echoRespnse(200, $response);
     }
-    echoRespnse(200, $response);
 });
 
 /**
@@ -555,12 +649,13 @@ $app->put('/tasks/:id', 'authenticate', function($task_id) use($app) {
         // task updated successfully
         $response["error"] = false;
         $response["message"] = "Task updated successfully";
+        echoRespnse(200, $response);
     } else {
         // task failed to update
         $response["error"] = true;
         $response["message"] = "Task failed to update. Please try again!";
+        echoRespnse(200, $response);
     }
-    echoRespnse(200, $response);
 });
 
 /**
@@ -578,12 +673,13 @@ $app->delete('/tasks/:id', 'authenticate', function($task_id) use($app) {
         // task deleted successfully
         $response["error"] = false;
         $response["message"] = "Task deleted succesfully";
+        echoRespnse(200, $response);
     } else {
         // task failed to delete
         $response["error"] = true;
         $response["message"] = "Task failed to delete. Please try again!";
+        echoRespnse(200, $response);
     }
-    echoRespnse(200, $response);
 });
 
 $app->run();

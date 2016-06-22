@@ -21,12 +21,10 @@ class DbHandler {
     /* ------------- `users` table method ------------------ */
 
     /**
-     * user registration
      * @param $fname
      * @param $lname
      * @param $email
      * @param $contact
-     * @param $password
      * @param $pan
      * @param $dob
      * @param $gender
@@ -34,22 +32,23 @@ class DbHandler {
      * @param $created_at
      * @return array|int
      */
-    public function createUser($fname, $lname, $email, $contact, $password, $pan, $dob, $gender, $corp_email, $created_at) {
+    public function createUser($fname, $lname, $email, $contact, $dob, $gender, $created_at) {
         require_once 'PassHash.php';
         $response = array();
 
         // First check if user already existed in db
         if (!$this->isUserExists($email)) {
             // Generating password hash
-            $password_hash = PassHash::hash($password);
+//            $password_hash = PassHash::hash($password);
 
             // Generating API key
             $api_key = $this->generateApiKey();
+            $otp = rand(100000, 999999);
 
             // insert query
-            $stmt = $this->conn->prepare("INSERT INTO customers(first_name, last_name, email, contact, password,pan,dob, gender,corp_email,created_at,api_key, status) values(?,?,?,?,?,?,?,?,?,?,?,1)");
+            $stmt = $this->conn->prepare("INSERT INTO customers(first_name, last_name, email, contact, dob, gender,created_at,otp,api_key, status) values(?,?,?,?,?,?,?,?,?,0)");
 
-            $stmt->bind_param("sssssssssss", $fname, $lname, $email, $contact, $password_hash, $pan, $dob, $gender, $corp_email, $created_at, $api_key);
+            $stmt->bind_param("sssssssss", $fname, $lname, $email, $contact, $dob, $gender,$created_at, $otp,$api_key);
 
             $result = $stmt->execute();
 
@@ -57,6 +56,8 @@ class DbHandler {
 
             // Check for successful insertion
             if ($result) {
+                // send sms
+                $this->sendSms($contact, $otp);
                 // User successfully inserted
                 return USER_CREATED_SUCCESSFULLY;
             } else {
@@ -69,6 +70,55 @@ class DbHandler {
         }
 
         return $response;
+    }
+
+    /**
+     * @param $user_id
+     * @param $otp
+     * @return bool
+     */
+    public function activateUser($user_id,$otp) {
+        //$stmt = $this->conn->prepare("SELECT u.id, u.name, u.email, u.mobile, u.apikey, u.status, u.created_at FROM users u, sms_codes WHERE sms_codes.code = ? AND sms_codes.user_id = u.id");
+        //$stmt->bind_param("s", $otp);
+        $sql = "SELECT otp from customers WHERE id = '".$user_id."'";
+        $result = mysqli_query($this->conn,$sql);
+        $row = mysqli_fetch_row($result);
+        if($row[0] === $otp){
+            // activate the user
+            $this->activateUserStatus($user_id);
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    /**
+     * @param $user_id
+     * @return bool
+     */
+    public function activateUserStatus($user_id){
+        $sql = "UPDATE customers set status = 1 WHERE id = '".$user_id."'";
+        $result = mysqli_query($this->conn,$sql);
+
+        if($result){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    /**
+     * @param null $phone
+     * @return bool
+     */
+    public function resendOTP($phone = NULL){
+        $otp = rand(100000, 999999);
+        // send sms
+        if($this->sendSms($phone, $otp)){
+            return true;
+        }else{
+            return false;
+        }
     }
 
     /**
@@ -112,6 +162,17 @@ class DbHandler {
         }
     }
 
+    public function isPhoneExists($phone = NULL){
+        $sql = "SELECT contact from customers where contact = '".$phone."'";
+        $result = mysqli_query($this->conn,$sql);
+        $row = mysqli_num_rows($result);
+        if($row > 0){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
     /**
      * Checking for duplicate user by email address
      * @param String $email email to check in db
@@ -127,19 +188,28 @@ class DbHandler {
         return $num_rows > 0;
     }
 
+    public function checkStatus($email = NULL){
+        $sql = "SELECT status from customers where email = '".$email."'";
+        $result = mysqli_query($this->conn,$sql);
+        print_r($row = mysqli_fetch_row($this->conn,$result));exit;
+//        if($result){
+//            return
+//        }else{
+//            return false;
+//        }
+    }
+
     /**
      * Fetching user by email
      * @param $email
      * @return $user
      */
     public function getUserByEmail($email) {
-        $stmt = $this->conn->prepare("SELECT first_name, last_name,email, api_key, status, created_at FROM customers WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        if ($stmt->execute()) {
-            $user = $stmt->get_result()->fetch_assoc();
-            $stmt->close();
-            return $user;
-        } else {
+        $sql = "SELECT first_name,last_name,email,contact,api_key,status,created_at FROM customers WHERE email = '".$email."'";
+        $result = mysqli_query($this->conn,$sql);
+        if($result){
+            return $row = mysqli_fetch_assoc($result);
+        }else{
             return NULL;
         }
     }
@@ -150,13 +220,20 @@ class DbHandler {
      * @return null
      */
     public function getApiKeyById($user_id) {
-        $stmt = $this->conn->prepare("SELECT api_key FROM customers WHERE id = ?");
+        /*$stmt = $this->conn->prepare("SELECT api_key FROM customers WHERE id = ?");
         $stmt->bind_param("i", $user_id);
         if ($stmt->execute()) {
             $api_key = $stmt->get_result()->fetch_assoc();
             $stmt->close();
             return $api_key;
         } else {
+            return NULL;
+        }*/
+        $sql = "SELECT api_key FROM customers WHERE id = '".$user_id."'";
+        $result = mysqli_query($this->conn,$sql);
+        if($result){
+            return $api_key = mysqli_fetch_assoc($result);
+        }else{
             return NULL;
         }
     }
@@ -167,13 +244,20 @@ class DbHandler {
      * @return null
      */
     public function getUserId($api_key) {
-        $stmt = $this->conn->prepare("SELECT id FROM customers WHERE api_key = ?");
+        /*$stmt = $this->conn->prepare("SELECT id FROM customers WHERE api_key = ?");
         $stmt->bind_param("s", $api_key);
         if ($stmt->execute()) {
             $user_id = $stmt->get_result()->fetch_assoc();
             $stmt->close();
             return $user_id;
         } else {
+            return NULL;
+        }*/
+        $sql = "SELECT id FROM customers WHERE api_key = '".$api_key."'";
+        $result = mysqli_query($this->conn,$sql);
+        if($result){
+            return $user_id = mysqli_fetch_assoc($result);
+        }else{
             return NULL;
         }
     }
@@ -393,6 +477,66 @@ class DbHandler {
         } else {
             printf("Errormessage: %s\n", $this->conn->error);
         }
+    }
+
+    /**
+     * @param $mobile
+     * @param $otp
+     * @return bool
+     */
+    function sendSms($mobile, $otp) {
+
+        $otp_prefix = ':';
+
+        //Your message to send, Add URL encoding here.
+        $message = urlencode("Hello! Welcome to Ezyride. Your OPT is $otp_prefix $otp");
+
+        $response_type = 'json';
+
+        //Define route
+        $route = "4";
+
+        //Prepare you post parameters
+        $postData = array(
+            'authkey' => MSG91_AUTH_KEY,
+            'mobiles' => $mobile,
+            'message' => $message,
+            'sender' => MSG91_SENDER_ID,
+            'route' => $route,
+            'response' => $response_type
+        );
+
+//API URL
+        $url = "https://control.msg91.com/sendhttp.php";
+
+// init the resource
+        $ch = curl_init();
+        curl_setopt_array($ch, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $postData
+            //,CURLOPT_FOLLOWLOCATION => true
+        ));
+
+
+        //Ignore SSL certificate verification
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+
+
+        //get response
+        $output = curl_exec($ch);
+
+        //Print error if any
+        if (curl_errno($ch)) {
+            echo 'error:' . curl_error($ch);
+            return false;
+        }
+
+        curl_close($ch);
+        return true;
+
     }
 
 }
