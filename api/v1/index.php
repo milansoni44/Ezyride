@@ -14,12 +14,12 @@ $user_id = NULL;
 /**
  * Verifying required params posted or not
  */
-function verifyRequiredParams($required_fields) {
+function verifyRequiredParams($required_fields)
+{
     $error = false;
     $error_fields = "";
     $request_params = array();
     $request_params = $_REQUEST;
-
 
 
     // Handling PUT request params
@@ -50,7 +50,8 @@ function verifyRequiredParams($required_fields) {
 /**
  * Validating email address
  */
-function validateEmail($email) {
+function validateEmail($email)
+{
     $app = \Slim\Slim::getInstance();
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $response["error"] = true;
@@ -65,12 +66,13 @@ function validateEmail($email) {
  * @return mixed
  * @throws \Slim\Exception\Stop
  */
-function pan_upload($file = array(),$file_name = NULL) {
+function pan_upload($file = array())
+{
     $app = \Slim\Slim::getInstance();
     $dir = dirname(dirname(dirname(__FILE__))) . "/assets/uploads/";
 
     $errors = array();
-//    $file_name = $file['name'];
+    $file_name = $file['name'];
     $file_size = $file['size'];
     $file_tmp = $file['tmp_name'];
     $file_type = $file['type'];
@@ -87,7 +89,7 @@ function pan_upload($file = array(),$file_name = NULL) {
 //        $app->stop();
 //    }
 
-    if ($file_size > 2097152) {
+    if ($file_size > 5097152) {
         $response["error"] = true;
         $response["message"] = "File size must be excately 2 MB";
         echoRespnse(200, $response);
@@ -105,7 +107,8 @@ function pan_upload($file = array(),$file_name = NULL) {
  * @param String $status_code Http response code
  * @param array $response Json response
  */
-function echoRespnse($status_code, $response) {
+function echoRespnse($status_code, $response)
+{
     $app = \Slim\Slim::getInstance();
     // Http response code
     $app->status($status_code);
@@ -116,47 +119,12 @@ function echoRespnse($status_code, $response) {
     echo json_encode($response);
 }
 
-function authenticate1(\Slim\Route $route) {
-    // Getting request headers
-    $headers = apache_request_headers();
-    $response = array();
-    $app = \Slim\Slim::getInstance();
-
-    // Verifying Authorization Header
-    if (isset($headers['Authorization'])) {
-        $db = new DbHandler();
-
-        // get the api key
-        $api_key = $headers['Authorization'];
-        // validating api key
-        //if (!$db->isValidApiKey($api_key)) {
-        if($api_key != "harsh"){
-            // api key is not present in users table
-            $response["error"] = true;
-            $response["message"] = "Access Denied. Invalid Api key";
-            echoRespnse(200, $response);
-            $app->stop();
-        } else {
-            global $user_id;
-            // get user primary key id
-//            $user = $db->getUserId($api_key);
-//            if ($user != NULL)
-                $user_id = 15;//$user["id"];
-        }
-    } else {
-        // api key is missing in header
-        $response["error"] = true;
-        $response["message"] = "Api key is misssing";
-        echoRespnse(200, $response);
-        $app->stop();
-    }
-}
-
 /**
  * Adding Middle Layer to authenticate every request
  * Checking if the request has valid api key in the 'Authorization' header
  */
-function authenticate(\Slim\Route $route) {
+function authenticate(\Slim\Route $route)
+{
     // Getting request headers
     $headers = apache_request_headers();
     $response = array();
@@ -191,17 +159,13 @@ function authenticate(\Slim\Route $route) {
     }
 }
 
-$app->hook('slim.before', function () use ($app) {
-    $app->view()->appendData(array('baseUrl' => 'http://localhost/Ezyride'));
-});
-
 /**
  * User Registration
  * url - /register
  * method - POST
  * params - name, email, password
  */
-$app->post('/register',function() use ($app) {
+$app->post('/register', function () use ($app) {
     // check for required params
     verifyRequiredParams(array('first_name', 'last_name', 'email', 'contact'));
 
@@ -222,12 +186,12 @@ $app->post('/register',function() use ($app) {
 
     $db = new DbHandler();
 
-    if($db->isPhoneExists($contact)){
+    /*if($db->isPhoneExists($contact)){
         $response["error"] = true;
         $response["message"] = "Sorry, this phone already existed";
         echoRespnse(200, $response);
         $app->stop();
-    }
+    }*/
 
     if ($db->isUserExists($email)) {
         $response["error"] = true;
@@ -242,10 +206,6 @@ $app->post('/register',function() use ($app) {
         $user = $db->getUserByEmail($email);
         $response["error"] = false;
         $response["status"] = true;
-        $response['fname'] = $user['first_name'];
-        $response['lname'] = $user['last_name'];
-        $response['email'] = $user['email'];
-        $response['mobile'] = $user['contact'];
         $response['apiKey'] = $user['api_key'];
         $response["message"] = "You are successfully registered, please verify your mobile number.";
         echoRespnse(200, $response);
@@ -254,12 +214,12 @@ $app->post('/register',function() use ($app) {
         $response["message"] = "Oops! An error occurred while registereing";
         echoRespnse(200, $response);
     } else if ($res == USER_ALREADY_EXISTED) {
-        if($db->checkStatus($email) == 0){
+        if ($db->checkStatus($email) == 0) {
             $response["error"] = false;
             $response["status"] = false;
             $response["message"] = "Sorry, this email already existed, please verify your mobile number";
             echoRespnse(200, $response);
-        }else{
+        } else {
             $response["error"] = true;
             $response["message"] = "Sorry, this email already existed";
             echoRespnse(200, $response);
@@ -273,7 +233,7 @@ $app->post('/register',function() use ($app) {
  * method - POST
  * params - user_id, otp
  */
-$app->post('/verify_otp','authenticate', function() use($app){
+$app->post('/verify_otp', 'authenticate', function () use ($app) {
     global $user_id;
     $response = array();
     //check for required params
@@ -281,31 +241,41 @@ $app->post('/verify_otp','authenticate', function() use($app){
     $otp = $app->request->post('otp');
 
     $db = new DbHandler();
-    if($db->activateUser($user_id, $otp)){
+    if ($db->activateUser($user_id, $otp)) {
+        $db->updateStatus($user_id);
+        $user = $db->getUserByID($user_id);
         $response["error"] = false;
+        $response['fname'] = $user['first_name'];
+        $response['lname'] = $user['last_name'];
+        $response['email'] = $user['email'];
+        $response['mobile'] = $user['contact'];
+        $response['dob'] = date("d-m-Y", strtotime($user['dob']));
+        $response['gender'] = $user['gender'];
+        //$response['apiKey'] = $user['api_key'];
         $response["message"] = "User successfully activated";
-    }else{
+    } else {
         $response["error"] = true;
         $response["message"] = "Oops! something went wrong.";
     }
-    echoRespnse(200,$response);
+    echoRespnse(200, $response);
 });
 
-$app->post('/resend_otp',function() use($app){
+$app->post('/resend_otp', 'authenticate', function () use ($app) {
+    global $user_id;
     //check for required params
-    verifyRequiredParams(array(' '));
+    verifyRequiredParams(array('phone'));
     $response = array();
     $phone = $app->request->post('phone');
 
     $db = new DbHandler();
-    if($db->resendOTP($phone)){
+    if ($db->resendOTP($phone, $user_id)) {
         $response["error"] = false;
         $response["message"] = "OTP send successfully";
-    }else{
+    } else {
         $response["error"] = true;
         $response["message"] = "Error while sending otp";
     }
-    echoRespnse(200,$response);
+    echoRespnse(200, $response);
 });
 
 /**
@@ -314,7 +284,7 @@ $app->post('/resend_otp',function() use($app){
  * method - POST
  * params - email, password
  */
-$app->post('/login', function() use ($app) {
+$app->post('/login', function () use ($app) {
     // check for required params
     verifyRequiredParams(array('email', 'password'));
 
@@ -354,11 +324,20 @@ $app->post('/login', function() use ($app) {
 $app->post('/rides', 'authenticate', function () use ($app) {
     global $user_id;
 
-    verifyRequiredParams(array('car_id', 'ride_date', 'ride_time', 'price_per_seat', 'seat_availability', 'only_ladies'));
+    verifyRequiredParams(array('car_id', 'from_lat', 'to_lat', 'from_long', 'to_long', 'from_main_address', 'from_sub_address', 'to_main_address', 'to_sub_address', 'ride_date', 'ride_time', 'price_per_seat', 'seat_availability', 'only_ladies'));
 
     // reading post params
     $car_id = $app->request->post('car_id');
+    $from_lat = $app->request->post('from_lat');
+    $to_lat = $app->request->post('to_lat');
+    $from_long = $app->request->post('from_long');
+    $to_long = $app->request->post('to_long');
+    $from_main_address = $app->request->post('from_main_address');
+    $from_sub_address = $app->request->post('from_sub_address');
+    $to_main_address = $app->request->post('to_main_address');
+    $to_sub_address = $app->request->post('to_sub_address');
     $ride_date = $app->request->post('ride_date');
+    $ride_f_date = date('Y-m-d', strtotime($ride_date));
     $ride_time = $app->request->post('ride_time');
     $price_per_seat = $app->request->post('price_per_seat');
     $seat_availability = $app->request->post('seat_availability');
@@ -369,7 +348,7 @@ $app->post('/rides', 'authenticate', function () use ($app) {
 
     $db = new DbHandler();
 
-    $res = $db->create_rides($user_id, $car_id, $ride_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies);
+    $res = $db->create_rides($user_id, $car_id, $from_lat, $to_lat, $from_long, $to_lat, $to_long, $from_main_address, $from_sub_address, $to_main_address, $to_sub_address, $ride_f_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies);
 
     if ($res) {
         $response['error'] = false;
@@ -382,7 +361,7 @@ $app->post('/rides', 'authenticate', function () use ($app) {
     }
 });
 
-$app->get('/rides/:id', 'authenticate', function($rides_id) {
+$app->get('/rides/:id', 'authenticate', function ($rides_id) {
     global $user_id;
     $response = array();
     $db = new DbHandler();
@@ -419,7 +398,7 @@ $app->get('/rides/:id', 'authenticate', function($rides_id) {
     }
 });
 
-$app->delete('/rides/:id', 'authenticate', function($rides_id) {
+$app->delete('/rides/:id', 'authenticate', function ($rides_id) {
     global $user_id;
     $response = array();
 
@@ -437,7 +416,7 @@ $app->delete('/rides/:id', 'authenticate', function($rides_id) {
     }
 });
 
-$app->put('/rides/:id', 'authenticate', function($rides_id) use($app) {
+$app->put('/rides/:id', 'authenticate', function ($rides_id) use ($app) {
 
     global $user_id;
     $car_id = $app->request->put('car_id');
@@ -465,13 +444,17 @@ $app->put('/rides/:id', 'authenticate', function($rides_id) use($app) {
     echoRespnse(200, $response);
 });
 
+$app->get('/rides','authenticate',function() use($app){
+
+});
+
 /**
  * Add Car
  * url-/addcar
  * method - POST
  * params - car_no, car_model, car_layout, car_image, ac_availability, music_system, air_bag, seat_belt
  */
-$app->post('/car', 'authenticate', function() use($app) {
+$app->post('/car', 'authenticate', function () use ($app) {
     global $user_id;
 
     verifyRequiredParams(array('car_no', 'car_model', 'car_layout'));
@@ -484,21 +467,22 @@ $app->post('/car', 'authenticate', function() use($app) {
     $music_system = $app->request->post('music_system');
     $air_bag = $app->request->post('air_bag');
     $seat_belt = $app->request->post('seat_belt');
+    $car_url = $app->request->post('car_url');
     $created_at = date('Y-m-d H:m:s');
 
-    $file_name = '';
+    /*$file_name = '';
     if (isset($_FILES['car_image'])) {
         $file_name = pan_upload($_FILES['car_image']);
-    }
+    }*/
     $response = array();
 
     $db = new DbHandler();
-    $res = $db->create_car($user_id, $car_no, $car_model, $car_layout, $file_name, $ac_availability, $music_system, $air_bag, $seat_belt, $created_at);
+    $res = $db->create_car($user_id, $car_no, $car_model, $car_layout, $car_url, $ac_availability, $music_system, $air_bag, $seat_belt, $created_at);
 
     if ($res) {
         $response["error"] = false;
         $response["message"] = "$car_no successfully created";
-        echoRespnse(201, $response);
+        echoRespnse(200, $response);
     } else {
         $response["error"] = true;
         $response["message"] = "Error while inserting car";
@@ -511,7 +495,7 @@ $app->post('/car', 'authenticate', function() use($app) {
  * url - /car/:id
  * method - GET
  */
-$app->get('/car/:id', 'authenticate', function($car_id) use($app) {
+$app->get('/car/:id', 'authenticate', function ($car_id) use ($app) {
     global $user_id;
     $req = $app->request;
     $base_url = $req->getUrl() . "/Ezyride/assets/uploads";
@@ -548,7 +532,7 @@ $app->get('/car/:id', 'authenticate', function($car_id) use($app) {
  * method GET
  * url /car
  */
-$app->get('/car', 'authenticate', function() use($app) {
+$app->get('/car', 'authenticate', function () use ($app) {
     global $user_id;
     $req = $app->request;
     $base_url = $req->getUrl() . "/Ezyride/assets/uploads";
@@ -560,8 +544,43 @@ $app->get('/car', 'authenticate', function() use($app) {
     $result = $db->getAllUserCars($user_id);
 
     $response["error"] = false;
-    $response["cars"] = array();
+    $cars = array();
+//    $response["cars"] = array();
+    $response['cars'] = array(array('id' => 0, 'car_model' => 'select'));
+    // looping through result and preparing tasks array
+    while ($car = $result->fetch_assoc()) {
+        $tmp = array();
+        $tmp["id"] = $car["id"];
+        $tmp["car_model"] = $car["car_model"];
+        $cars[] = $tmp;
+    }
+    if (sizeof($cars) > 0) {
+        $cars = array_merge($response['cars'], $cars);
+        $response['cars'] = $cars;
+        $response['cars'] = array(array('id' => 156415642, 'car_model' => 'Add new Car'));
+        $cars1 = array_merge($cars,$response['cars']);
+        $response['cars'] = $cars1;
 
+        echoRespnse(200, $response);
+    } else {
+        $response1["error"] = true;
+        $response1['message'] = "No cars found.";
+        echoRespnse(200, $response1);
+    }
+});
+
+$app->get('/car_details','authenticate',function() use($app){
+    global $user_id;
+
+    $response = array();
+    $db = new DbHandler();
+
+    // fetching all user tasks
+    $result = $db->getAllUserCars($user_id);
+
+    $response["error"] = false;
+//    $cars = array();
+    $response["cars"] = array();
     // looping through result and preparing tasks array
     while ($car = $result->fetch_assoc()) {
         $tmp = array();
@@ -569,24 +588,45 @@ $app->get('/car', 'authenticate', function() use($app) {
         $tmp["car_no"] = $car["car_no"];
         $tmp["car_model"] = $car["car_model"];
         $tmp["car_layout"] = $car["car_layout"];
-        $tmp["car_image"] = $base_url . "/" . $car['car_image'];
+        $tmp["car_image"] = $car['car_image'];
         $tmp["ac_availability"] = $car["ac_availability"];
         $tmp["music_system"] = $car["music_system"];
         $tmp["air_bag"] = $car["air_bag"];
         $tmp["seat_belt"] = $car["seat_belt"];
-        array_push($response["cars"], $tmp);
+        $response["cars"][] = $tmp;
     }
 
-    echoRespnse(200, $response);
+//echo sizeof($response["cars"]);exit;
+    if (sizeof($response["cars"]) > 0) {
+        $response['error'] = false;
+        echoRespnse(200, $response);
+    } else {
+        $response1["error"] = true;
+        $response1['message'] = "No cars found.";
+        echoRespnse(200, $response1);
+    }
 });
 
+/*
+
+$tmp = array();
+$tmp["id"] = $car["id"];
+$tmp["car_no"] = $car["car_no"];
+$tmp["car_model"] = $car["car_model"];
+$tmp["car_layout"] = $car["car_layout"];
+$tmp["car_image"] = $base_url . "/" . $car['car_image'];
+$tmp["ac_availability"] = $car["ac_availability"];
+$tmp["music_system"] = $car["music_system"];
+$tmp["air_bag"] = $car["air_bag"];
+$tmp["seat_belt"] = $car["seat_belt"];
+$response["cars"][] = $tmp;*/
 /**
  * Updating existing car
  * method PUT
  * params car_id
  * url - /car/:id
  */
-$app->post('/car/:id', 'authenticate', function($car_id) use($app) {
+$app->post('/car/:id', 'authenticate', function ($car_id) use ($app) {
     // check for required params
     global $user_id;
 
@@ -632,7 +672,7 @@ $app->post('/car/:id', 'authenticate', function($car_id) use($app) {
  * params task, status
  * url - /tasks/:id
  */
-$app->put('/tasks/:id', 'authenticate', function($task_id) use($app) {
+$app->put('/tasks/:id', 'authenticate', function ($task_id) use ($app) {
     // check for required params
     verifyRequiredParams(array('task', 'status'));
 
@@ -663,7 +703,7 @@ $app->put('/tasks/:id', 'authenticate', function($task_id) use($app) {
  * method DELETE
  * url /tasks
  */
-$app->delete('/tasks/:id', 'authenticate', function($task_id) use($app) {
+$app->delete('/tasks/:id', 'authenticate', function ($task_id) use ($app) {
     global $user_id;
 
     $db = new DbHandler();
@@ -680,6 +720,29 @@ $app->delete('/tasks/:id', 'authenticate', function($task_id) use($app) {
         $response["message"] = "Task failed to delete. Please try again!";
         echoRespnse(200, $response);
     }
+});
+
+$app->post('/upload_car','authenticate',function() use($app){
+    global $user_id;
+    $base_url = $app->request->getUrl() . "/Ezyride/assets/uploads/";
+    $response = array();
+    $file_name = '';
+    if (isset($_FILES['car_image'])) {
+        if($file_name = pan_upload($_FILES['car_image'])){
+            $response['error'] = false;
+            $response['url'] = $base_url.$file_name;
+        }else{
+            $response['error'] = true;
+            $response['message'] = "Failed to upload car image";
+        }
+    }else{
+        $response['error'] = true;
+        $response['message'] = "Failed to upload car image";
+    }
+    echoRespnse(200,$response);
+    $app->stop();
+
+
 });
 
 $app->run();

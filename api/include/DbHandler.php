@@ -111,10 +111,24 @@ class DbHandler {
      * @param null $phone
      * @return bool
      */
-    public function resendOTP($phone = NULL){
+    public function resendOTP($phone = NULL,$user_id){
         $otp = rand(100000, 999999);
         // send sms
         if($this->sendSms($phone, $otp)){
+            if($this->updateOtp($otp,$user_id,$phone)) {
+                return true;
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }
+    }
+
+    public function updateOtp($otp,$user_id,$phone){
+        $sql = "UPDATE customers set otp = '".$otp."', contact='".$phone."' where id = '".$user_id."'";
+        $result = mysqli_query($this->conn,$sql);
+        if($result){
             return true;
         }else{
             return false;
@@ -191,12 +205,20 @@ class DbHandler {
     public function checkStatus($email = NULL){
         $sql = "SELECT status from customers where email = '".$email."'";
         $result = mysqli_query($this->conn,$sql);
-        print_r($row = mysqli_fetch_row($this->conn,$result));exit;
-//        if($result){
-//            return
-//        }else{
-//            return false;
-//        }
+        $row = mysqli_num_rows($result);
+        if($row > 0){
+            return $row1 = mysqli_fetch_assoc($result);
+        }
+    }
+
+    public function updateStatus($user_id){
+        $sql = "Update customers SET contact_verify = '1',status = '1' where id = '".$user_id."'";
+        $result= mysqli_query($this->conn,$sql);
+        if($result){
+            return true;
+        }else{
+            return false;
+        }
     }
 
     /**
@@ -206,6 +228,16 @@ class DbHandler {
      */
     public function getUserByEmail($email) {
         $sql = "SELECT first_name,last_name,email,contact,api_key,status,created_at FROM customers WHERE email = '".$email."'";
+        $result = mysqli_query($this->conn,$sql);
+        if($result){
+            return $row = mysqli_fetch_assoc($result);
+        }else{
+            return NULL;
+        }
+    }
+
+    public function getUserByID($user_id){
+        $sql = "SELECT first_name,last_name,email,contact,api_key,status,dob,gender FROM customers WHERE id = '".$user_id."'";
         $result = mysqli_query($this->conn,$sql);
         if($result){
             return $row = mysqli_fetch_assoc($result);
@@ -339,12 +371,19 @@ class DbHandler {
      * @return bool|mysqli_result
      */
     public function getAllUserCars($user_id) {
-        $stmt = $this->conn->prepare("SELECT car_details.* FROM car_details, customers WHERE car_details.user_id = customers.id AND customers.id = ?");
+        $sql = "SELECT car_details.* FROM car_details, customers WHERE car_details.user_id = customers.id AND customers.id = $user_id";
+        $result = mysqli_query($this->conn,$sql);
+        if($result){
+            return $result;
+        }else{
+            return NULL;
+        }
+        /*$stmt = $this->conn->prepare("SELECT car_details.* FROM car_details, customers WHERE car_details.user_id = customers.id AND customers.id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $cars = $stmt->get_result();
         $stmt->close();
-        return $cars;
+        return $cars;*/
     }
 
     /**
@@ -388,21 +427,10 @@ class DbHandler {
         return $num_affected_rows > 0;
     }
 
-    /**
-     * 
-     * @param type $user_id
-     * @param type $car_id
-     * @param type $ride_date
-     * @param type $ride_time
-     * @param type $price_per_seat
-     * @param type $seat_availability
-     * @param type $only_ladies
-     * @return boolean
-     */
-    public function create_rides($user_id, $car_id, $ride_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies) {
+    public function create_rides($user_id, $car_id, $from_lat,$to_lat,$from_long,$to_lat,$to_long,$from_main_address,$from_sub_address,$to_main_address,$to_sub_address,$ride_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies) {
         $creation_time = date("Y-m-d h:i:sa");
-        if ($stmt = $this->conn->prepare('INSERT INTO rides(user_id, car_id, ride_date, ride_time,  price_per_seat, seat_availability, only_ladies, creation_time) values(?,?,?,?,?,?,?,?)')) {
-            $stmt->bind_param('ssssssss', $user_id, $car_id, $ride_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies, $creation_time);
+        if ($stmt = $this->conn->prepare('INSERT INTO rides(user_id, car_id, from_lat,to_lat,from_long,to_long,from_main_address,from_sub_address,to_main_address,to_sub_address, ride_date, ride_time,  price_per_seat, seat_availability, only_ladies, creation_time) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')) {
+            $stmt->bind_param('ssssssssssssssss', $user_id, $car_id, $from_lat,$to_lat,$from_long,$to_long,$from_main_address,$from_sub_address,$to_main_address,$to_sub_address,$ride_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies, $creation_time);
 
             $result = $stmt->execute();
 
