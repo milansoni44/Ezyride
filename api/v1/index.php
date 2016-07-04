@@ -607,19 +607,6 @@ $app->get('/car_details','authenticate',function() use($app){
     }
 });
 
-/*
-
-$tmp = array();
-$tmp["id"] = $car["id"];
-$tmp["car_no"] = $car["car_no"];
-$tmp["car_model"] = $car["car_model"];
-$tmp["car_layout"] = $car["car_layout"];
-$tmp["car_image"] = $base_url . "/" . $car['car_image'];
-$tmp["ac_availability"] = $car["ac_availability"];
-$tmp["music_system"] = $car["music_system"];
-$tmp["air_bag"] = $car["air_bag"];
-$tmp["seat_belt"] = $car["seat_belt"];
-$response["cars"][] = $tmp;*/
 /**
  * Updating existing car
  * method PUT
