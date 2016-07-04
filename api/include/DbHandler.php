@@ -21,14 +21,13 @@ class DbHandler {
     /* ------------- `users` table method ------------------ */
 
     /**
+     * create user
      * @param $fname
      * @param $lname
      * @param $email
      * @param $contact
-     * @param $pan
      * @param $dob
      * @param $gender
-     * @param $corp_email
      * @param $created_at
      * @return array|int
      */
@@ -387,13 +386,13 @@ class DbHandler {
     }
 
     /**
-     * update car by car id of a particular user
+     * update car by user id and car id
      * @param $user_id
      * @param $car_id
      * @param $car_no
      * @param $car_model
      * @param $car_layout
-     * @param $file_name
+     * @param $car_url
      * @param $ac_availability
      * @param $music_system
      * @param $air_bag
@@ -401,10 +400,10 @@ class DbHandler {
      * @param $updated_at
      * @return bool
      */
-    public function updateCar($user_id, $car_id, $car_no, $car_model, $car_layout, $file_name, $ac_availability, $music_system, $air_bag, $seat_belt, $updated_at) {
+    public function updateCar($user_id, $car_id,$car_no, $car_model, $car_layout, $car_url, $ac_availability, $music_system, $air_bag, $seat_belt, $updated_at) {
         $stmt = $this->conn->prepare("UPDATE car_details SET user_id = ?, car_no = ?, car_model = ?, car_layout = ?, car_image = ?, ac_availability = ?, music_system = ?, air_bag = ?, seat_belt = ?, updation_time = ? WHERE id = ?");
 
-        $stmt->bind_param("sssssssssss", $user_id, $car_no, $car_model, $car_layout, $file_name, $ac_availability, $music_system, $air_bag, $seat_belt, $updated_at, $car_id);
+        $stmt->bind_param("sssssssssss", $user_id, $car_no, $car_model, $car_layout, $car_url, $ac_availability, $music_system, $air_bag, $seat_belt, $updated_at, $car_id);
 
         $stmt->execute();
         $num_affected_rows = $stmt->affected_rows;
@@ -413,21 +412,21 @@ class DbHandler {
     }
 
     /**
-     * Deleting a task
+     * delete car by user id and car id
      * @param $user_id
-     * @param $task_id
+     * @param $car_id
      * @return bool
      */
-    public function deleteTask($user_id, $task_id) {
-        $stmt = $this->conn->prepare("DELETE t FROM tasks t, user_tasks ut WHERE t.id = ? AND ut.task_id = t.id AND ut.user_id = ?");
-        $stmt->bind_param("ii", $task_id, $user_id);
+    public function deleteCar($user_id, $car_id) {
+        $stmt = $this->conn->prepare("DELETE t FROM car_details t, customers ut WHERE t.id = ? AND ut.id = t.user_id AND ut.id = ?");
+        $stmt->bind_param("ii", $car_id, $user_id);
         $stmt->execute();
         $num_affected_rows = $stmt->affected_rows;
         $stmt->close();
         return $num_affected_rows > 0;
     }
 
-    public function create_rides($user_id, $car_id, $from_lat,$to_lat,$from_long,$to_lat,$to_long,$from_main_address,$from_sub_address,$to_main_address,$to_sub_address,$ride_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies) {
+    public function create_rides($user_id, $car_id, $from_lat,$to_lat,$from_long,$to_long,$from_main_address,$from_sub_address,$to_main_address,$to_sub_address,$ride_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies) {
         $creation_time = date("Y-m-d h:i:sa");
         if ($stmt = $this->conn->prepare('INSERT INTO rides(user_id, car_id, from_lat,to_lat,from_long,to_long,from_main_address,from_sub_address,to_main_address,to_sub_address, ride_date, ride_time,  price_per_seat, seat_availability, only_ladies, creation_time) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')) {
             $stmt->bind_param('ssssssssssssssss', $user_id, $car_id, $from_lat,$to_lat,$from_long,$to_long,$from_main_address,$from_sub_address,$to_main_address,$to_sub_address,$ride_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies, $creation_time);

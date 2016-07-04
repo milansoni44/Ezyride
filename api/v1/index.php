@@ -348,7 +348,7 @@ $app->post('/rides', 'authenticate', function () use ($app) {
 
     $db = new DbHandler();
 
-    $res = $db->create_rides($user_id, $car_id, $from_lat, $to_lat, $from_long, $to_lat, $to_long, $from_main_address, $from_sub_address, $to_main_address, $to_sub_address, $ride_f_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies);
+    $res = $db->create_rides($user_id, $car_id, $from_lat, $to_lat, $from_long, $to_long, $from_main_address, $from_sub_address, $to_main_address, $to_sub_address, $ride_f_date, $ride_time, $price_per_seat, $seat_availability, $only_ladies);
 
     if ($res) {
         $response['error'] = false;
@@ -498,7 +498,7 @@ $app->post('/car', 'authenticate', function () use ($app) {
 $app->get('/car/:id', 'authenticate', function ($car_id) use ($app) {
     global $user_id;
     $req = $app->request;
-    $base_url = $req->getUrl() . "/Ezyride/assets/uploads";
+    $base_url = $req->getUrl() . "/ezyride/assets/uploads";
 
     $response = array();
     $db = new DbHandler();
@@ -535,7 +535,7 @@ $app->get('/car/:id', 'authenticate', function ($car_id) use ($app) {
 $app->get('/car', 'authenticate', function () use ($app) {
     global $user_id;
     $req = $app->request;
-    $base_url = $req->getUrl() . "/Ezyride/assets/uploads";
+    $base_url = $req->getUrl() . "/ezyride/assets/uploads";
 
     $response = array();
     $db = new DbHandler();
@@ -626,13 +626,13 @@ $response["cars"][] = $tmp;*/
  * params car_id
  * url - /car/:id
  */
-$app->post('/car/:id', 'authenticate', function ($car_id) use ($app) {
+$app->put('/car/:id', 'authenticate', function ($car_id) use ($app) {
     // check for required params
     global $user_id;
 
     verifyRequiredParams(array('car_no', 'car_model', 'car_layout'));
 
-
+    // reading post params
     $car_no = $app->request->post('car_no');
     $car_model = $app->request->post('car_model');
     $car_layout = $app->request->post('car_layout');
@@ -640,18 +640,19 @@ $app->post('/car/:id', 'authenticate', function ($car_id) use ($app) {
     $music_system = $app->request->post('music_system');
     $air_bag = $app->request->post('air_bag');
     $seat_belt = $app->request->post('seat_belt');
+    $car_url = $app->request->post('car_url');
     $updated_at = date('Y-m-d H:m:s');
 
-    $file_name = '';
+    /*$file_name = '';
     if (isset($_FILES['car_image'])) {
         $file_name = pan_upload($_FILES['car_image']);
-    }
+    }*/
 
     $db = new DbHandler();
     $response = array();
 
     // updating task
-    $result = $db->updateCar($user_id, $car_id, $car_no, $car_model, $car_layout, $file_name, $ac_availability, $music_system, $air_bag, $seat_belt, $updated_at);
+    $result = $db->updateCar($user_id, $car_id,$car_no, $car_model, $car_layout, $car_url, $ac_availability, $music_system, $air_bag, $seat_belt, $updated_at);
 
     if ($result) {
         // task updated successfully
@@ -662,6 +663,26 @@ $app->post('/car/:id', 'authenticate', function ($car_id) use ($app) {
         // task failed to update
         $response["error"] = true;
         $response["message"] = "Car failed to update. Please try again!";
+        echoRespnse(200, $response);
+    }
+});
+
+$app->delete('/car/:id','authenticate', function($car_id) use($app){
+    global $user_id;
+
+    $db = new DbHandler();
+    $response = array();
+
+    // delete car
+    $result = $db->deleteCar($user_id,$car_id);
+    if($result > 0){
+        // car deleted successfully
+        $response["error"] = false;
+        $response["message"] = "Car Deleted successfully";
+        echoRespnse(200, $response);
+    }else{
+        $response["error"] = true;
+        $response["message"] = "Car failed to delete";
         echoRespnse(200, $response);
     }
 });
@@ -724,7 +745,7 @@ $app->delete('/tasks/:id', 'authenticate', function ($task_id) use ($app) {
 
 $app->post('/upload_car','authenticate',function() use($app){
     global $user_id;
-    $base_url = $app->request->getUrl() . "/Ezyride/assets/uploads/";
+    $base_url = $app->request->getUrl() . "/ezyride/assets/uploads/";
     $response = array();
     $file_name = '';
     if (isset($_FILES['car_image'])) {
