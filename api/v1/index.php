@@ -167,13 +167,13 @@ function authenticate(\Slim\Route $route)
  */
 $app->post('/register', function () use ($app) {
     // check for required params
-    verifyRequiredParams(array('first_name', 'last_name', 'email', 'contact'));
+    verifyRequiredParams(array('first_name', 'email', 'contact'));
 
     $response = array();
 
     // reading post params
     $fname = $app->request->post('first_name');
-    $lname = $app->request->post('last_name');
+//    $lname = $app->request->post('last_name');
     $email = $app->request->post('email');
 //    $password = $app->request->post('password');
     $contact = $app->request->post('contact');
@@ -200,7 +200,7 @@ $app->post('/register', function () use ($app) {
         $app->stop();
     }
 
-    $res = $db->createUser($fname, $lname, $email, $contact, $dob, $gender, $created_at);
+    $res = $db->createUser($fname, $email, $contact, $dob, $gender, $created_at);
 
     if ($res == USER_CREATED_SUCCESSFULLY) {
         $user = $db->getUserByEmail($email);
@@ -227,6 +227,51 @@ $app->post('/register', function () use ($app) {
     }
 });
 
+$app->put('/user', 'authenticate', function () use ($app) {
+    global $user_id;
+    $response = array();
+    // check for required params
+    verifyRequiredParams(array('first_name'));
+
+    $fname = $app->request->put('first_name');
+//    $email = $app->request->post('email');
+    $contact = $app->request->put('contact');
+    $date = $app->request->put('dob');
+    $dob = date('Y-m-d', strtotime($date));
+    $pic = $app->request->put('profile_pic');
+    $gender = $app->request->put('gender');
+    $fb_stat = $app->request->put('fb_stat');
+    $corp_mail = $app->request->put('corp_email_verify');
+    $pan = $app->request->put('pan_image');
+    $pan_verify = $app->request->put('pan_verify');
+    $updated_at = date('Y-m-d H:m:s');
+
+    $db = new DbHandler();
+
+    /*if($db->isPhoneExists($contact,$user_id) == TRUE){
+        // no code to run
+    }else if($db->isPhoneExists($contact,$user_id) == FALSE){
+        // no code to run
+    }else{
+        $response["error"] = true;
+        $response["message"] = "Sorry, this phone already existed";
+        echoRespnse(200, $response);
+        $app->stop();
+    }*/
+
+    $res = $db->updateUser($user_id, $fname, $contact, $dob, $pic,$gender,$fb_stat,$corp_mail,$pan,$pan_verify, $updated_at);
+
+    if($res){
+        $response['error'] = false;
+        $response['message'] = "User updated successfully";
+        echoRespnse(200,$response);
+    }else{
+        $response['error'] = true;
+        $response['message'] = "User failed to update";
+        echoRespnse(200,$response);
+    }
+});
+
 /**
  * verify otp
  * url - /very_otp
@@ -246,7 +291,7 @@ $app->post('/verify_otp', 'authenticate', function () use ($app) {
         $user = $db->getUserByID($user_id);
         $response["error"] = false;
         $response['fname'] = $user['first_name'];
-        $response['lname'] = $user['last_name'];
+//        $response['lname'] = $user['last_name'];
         $response['email'] = $user['email'];
         $response['mobile'] = $user['contact'];
         $response['dob'] = date("d-m-Y", strtotime($user['dob']));
@@ -444,7 +489,7 @@ $app->put('/rides/:id', 'authenticate', function ($rides_id) use ($app) {
     echoRespnse(200, $response);
 });
 
-$app->get('/rides','authenticate',function() use($app){
+$app->get('/rides', 'authenticate', function () use ($app) {
 
 });
 
@@ -558,7 +603,7 @@ $app->get('/car', 'authenticate', function () use ($app) {
         $cars = array_merge($response['cars'], $cars);
         $response['cars'] = $cars;
         $response['cars'] = array(array('id' => 156415642, 'car_model' => 'Add new Car'));
-        $cars1 = array_merge($cars,$response['cars']);
+        $cars1 = array_merge($cars, $response['cars']);
         $response['cars'] = $cars1;
 
         echoRespnse(200, $response);
@@ -569,7 +614,7 @@ $app->get('/car', 'authenticate', function () use ($app) {
     }
 });
 
-$app->get('/car_details','authenticate',function() use($app){
+$app->get('/car_details', 'authenticate', function () use ($app) {
     global $user_id;
 
     $response = array();
@@ -639,7 +684,7 @@ $app->put('/car/:id', 'authenticate', function ($car_id) use ($app) {
     $response = array();
 
     // updating task
-    $result = $db->updateCar($user_id, $car_id,$car_no, $car_model, $car_layout, $car_url, $ac_availability, $music_system, $air_bag, $seat_belt, $updated_at);
+    $result = $db->updateCar($user_id, $car_id, $car_no, $car_model, $car_layout, $car_url, $ac_availability, $music_system, $air_bag, $seat_belt, $updated_at);
 
     if ($result) {
         // task updated successfully
@@ -654,20 +699,20 @@ $app->put('/car/:id', 'authenticate', function ($car_id) use ($app) {
     }
 });
 
-$app->delete('/car/:id','authenticate', function($car_id) use($app){
+$app->delete('/car/:id', 'authenticate', function ($car_id) use ($app) {
     global $user_id;
 
     $db = new DbHandler();
     $response = array();
 
     // delete car
-    $result = $db->deleteCar($user_id,$car_id);
-    if($result > 0){
+    $result = $db->deleteCar($user_id, $car_id);
+    if ($result > 0) {
         // car deleted successfully
         $response["error"] = false;
         $response["message"] = "Car Deleted successfully";
         echoRespnse(200, $response);
-    }else{
+    } else {
         $response["error"] = true;
         $response["message"] = "Car failed to delete";
         echoRespnse(200, $response);
@@ -730,24 +775,24 @@ $app->delete('/tasks/:id', 'authenticate', function ($task_id) use ($app) {
     }
 });
 
-$app->post('/upload_car','authenticate',function() use($app){
+$app->post('/upload_car', 'authenticate', function () use ($app) {
     global $user_id;
     $base_url = $app->request->getUrl() . "/ezyride/assets/uploads/";
     $response = array();
     $file_name = '';
     if (isset($_FILES['car_image'])) {
-        if($file_name = pan_upload($_FILES['car_image'])){
+        if ($file_name = pan_upload($_FILES['car_image'])) {
             $response['error'] = false;
-            $response['url'] = $base_url.$file_name;
-        }else{
+            $response['url'] = $base_url . $file_name;
+        } else {
             $response['error'] = true;
             $response['message'] = "Failed to upload car image";
         }
-    }else{
+    } else {
         $response['error'] = true;
         $response['message'] = "Failed to upload car image";
     }
-    echoRespnse(200,$response);
+    echoRespnse(200, $response);
     $app->stop();
 
 
