@@ -28,7 +28,7 @@
 								$option = array(''=>'select User');
 								if(!empty($customers)){
 									foreach($customers as $row_cust){
-										$option[$row_cust->id] = $row_cust->first_name." ".$row_cust->last_name;
+										$option[$row_cust->id] = $row_cust->first_name;
 									}
 								}
 								echo form_dropdown('user',$option,isset($_POST['user'])?$_POST['user']:$car->user_id,'class="form-control" id="user"');

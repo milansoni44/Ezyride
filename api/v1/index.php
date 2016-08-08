@@ -160,6 +160,16 @@ function authenticate(\Slim\Route $route)
 }
 
 /**
+ * @param $val1
+ * @param $val2
+ * @return int
+ */
+function compareDeepValue($val1, $val2)
+{
+    return strcmp($val1['id'], $val2['id']);
+}
+
+/**
  * User Registration
  * url - /register
  * method - POST
@@ -207,6 +217,7 @@ $app->post('/register', function () use ($app) {
         $response["error"] = false;
         $response["status"] = true;
         $response['apiKey'] = $user['api_key'];
+        $response['seller_id'] = $user['seller_id'];
         $response["message"] = "You are successfully registered, please verify your mobile number.";
         echoRespnse(200, $response);
     } else if ($res == USER_CREATE_FAILED) {
@@ -214,9 +225,10 @@ $app->post('/register', function () use ($app) {
         $response["message"] = "Oops! An error occurred while registereing";
         echoRespnse(200, $response);
     } else if ($res == USER_ALREADY_EXISTED) {
-        if ($db->checkStatus($email) == 0) {
+        if ($user = $db->checkStatus($email) == 0) {
             $response["error"] = false;
             $response["status"] = false;
+            $response['seller_id'] = $user['seller_id'];
             $response["message"] = "Sorry, this email already existed, please verify your mobile number";
             echoRespnse(200, $response);
         } else {
@@ -234,7 +246,6 @@ $app->put('/user', 'authenticate', function () use ($app) {
     verifyRequiredParams(array('first_name'));
 
     $fname = $app->request->put('first_name');
-//    $email = $app->request->post('email');
     $contact = $app->request->put('contact');
     $date = $app->request->put('dob');
     $dob = date('Y-m-d', strtotime($date));
@@ -244,6 +255,19 @@ $app->put('/user', 'authenticate', function () use ($app) {
     $corp_mail = $app->request->put('corp_email_verify');
     $pan = $app->request->put('pan_image');
     $pan_verify = $app->request->put('pan_verify');
+
+    // changes on 25/07/2016
+    $address = $app->request->put('address');
+    $city_id = $app->request->put('city_id');
+    $city_name = $app->request->put('city_name');
+    $state_id = $app->request->put('state_id');
+    $state_name = $app->request->put('state_name');
+    $zip_code = $app->request->put('zip_code');
+    $ifsc_code = $app->request->put('ifsc_code');
+    $acc_no = $app->request->put('acc_no');
+    $payout_mode = $app->request->put('payout_mode');
+    // changes end
+
     $updated_at = date('Y-m-d H:m:s');
 
     $db = new DbHandler();
@@ -259,16 +283,16 @@ $app->put('/user', 'authenticate', function () use ($app) {
         $app->stop();
     }*/
 
-    $res = $db->updateUser($user_id, $fname, $contact, $dob, $pic,$gender,$fb_stat,$corp_mail,$pan,$pan_verify, $updated_at);
+    $res = $db->updateUser($user_id, $fname, $contact, $dob, $pic, $gender, $fb_stat, $corp_mail, $pan, $pan_verify, $address, $city_id, $city_name, $state_id, $state_name, $zip_code, $ifsc_code, $acc_no, $payout_mode, $updated_at);
 
-    if($res){
+    if ($res) {
         $response['error'] = false;
         $response['message'] = "User updated successfully";
-        echoRespnse(200,$response);
-    }else{
+        echoRespnse(200, $response);
+    } else {
         $response['error'] = true;
         $response['message'] = "User failed to update";
-        echoRespnse(200,$response);
+        echoRespnse(200, $response);
     }
 });
 
@@ -291,12 +315,10 @@ $app->post('/verify_otp', 'authenticate', function () use ($app) {
         $user = $db->getUserByID($user_id);
         $response["error"] = false;
         $response['fname'] = $user['first_name'];
-//        $response['lname'] = $user['last_name'];
         $response['email'] = $user['email'];
         $response['mobile'] = $user['contact'];
         $response['dob'] = date("d-m-Y", strtotime($user['dob']));
         $response['gender'] = $user['gender'];
-        //$response['apiKey'] = $user['api_key'];
         $response["message"] = "User successfully activated";
     } else {
         $response["error"] = true;
@@ -324,7 +346,7 @@ $app->post('/resend_otp', 'authenticate', function () use ($app) {
 });
 
 /**
- * User Login
+ * User Login no need to use
  * url - /login
  * method - POST
  * params - email, password
@@ -347,7 +369,7 @@ $app->post('/login', function () use ($app) {
         if ($user != NULL) {
             $response["error"] = false;
             $response['fname'] = $user['first_name'];
-            $response['lname'] = $user['last_name'];
+//            $response['lname'] = $user['last_name'];
             $response['email'] = $user['email'];
             $response['mobile'] = $user['contact'];
             $response['apiKey'] = $user['api_key'];
@@ -404,6 +426,18 @@ $app->post('/rides', 'authenticate', function () use ($app) {
         $response['message'] = 'Erro while create rides.';
         echoRespnse(200, $response);
     }
+});
+
+$app->post('/rides', 'authenticate', function () use ($app) {
+    global $user_id;
+    verifyRequiredParams(array('date'));
+
+    $date = $app->request->post('date');
+    $ride_date = date('Y-m-d', strtotime($date));
+
+    $db = new DbHandler();
+    $result = $db->getUsersRides($user_id, $ride_date);
+
 });
 
 $app->get('/rides/:id', 'authenticate', function ($rides_id) {
@@ -489,13 +523,10 @@ $app->put('/rides/:id', 'authenticate', function ($rides_id) use ($app) {
     echoRespnse(200, $response);
 });
 
-$app->get('/rides', 'authenticate', function () use ($app) {
-
-});
 
 /**
  * Add Car
- * url-/addcar
+ * url-/car
  * method - POST
  * params - car_no, car_model, car_layout, car_image, ac_availability, music_system, air_bag, seat_belt
  */
@@ -563,7 +594,7 @@ $app->get('/car/:id', 'authenticate', function ($car_id) use ($app) {
         $response['music_system'] = $result['music_system'];
         $response['air_bag'] = $result['air_bag'];
         $response['seat_belt'] = $result['seat_belt'];
-        $response['user'] = $result['first_name'] . " " . $result['last_name'];
+        $response['user'] = $result['first_name'];
         echoRespnse(200, $response);
     } else {
         $response["error"] = true;
@@ -585,14 +616,14 @@ $app->get('/car', 'authenticate', function () use ($app) {
     $response = array();
     $db = new DbHandler();
 
-    // fetching all user tasks
+    // fetching all user cars
     $result = $db->getAllUserCars($user_id);
 
     $response["error"] = false;
     $cars = array();
 //    $response["cars"] = array();
     $response['cars'] = array(array('id' => 0, 'car_model' => 'select'));
-    // looping through result and preparing tasks array
+    // looping through result and preparing cars array
     while ($car = $result->fetch_assoc()) {
         $tmp = array();
         $tmp["id"] = $car["id"];
@@ -620,13 +651,13 @@ $app->get('/car_details', 'authenticate', function () use ($app) {
     $response = array();
     $db = new DbHandler();
 
-    // fetching all user tasks
+    // fetching all user cars
     $result = $db->getAllUserCars($user_id);
 
     $response["error"] = false;
 //    $cars = array();
     $response["cars"] = array();
-    // looping through result and preparing tasks array
+    // looping through result and preparing car details array
     while ($car = $result->fetch_assoc()) {
         $tmp = array();
         $tmp["id"] = $car["id"];
@@ -641,7 +672,6 @@ $app->get('/car_details', 'authenticate', function () use ($app) {
         $response["cars"][] = $tmp;
     }
 
-//echo sizeof($response["cars"]);exit;
     if (sizeof($response["cars"]) > 0) {
         $response['error'] = false;
         echoRespnse(200, $response);
@@ -683,16 +713,16 @@ $app->put('/car/:id', 'authenticate', function ($car_id) use ($app) {
     $db = new DbHandler();
     $response = array();
 
-    // updating task
+    // updating car
     $result = $db->updateCar($user_id, $car_id, $car_no, $car_model, $car_layout, $car_url, $ac_availability, $music_system, $air_bag, $seat_belt, $updated_at);
 
     if ($result) {
-        // task updated successfully
+        // car updated successfully
         $response["error"] = false;
         $response["message"] = "Car updated successfully";
         echoRespnse(200, $response);
     } else {
-        // task failed to update
+        // car failed to update
         $response["error"] = true;
         $response["message"] = "Car failed to update. Please try again!";
         echoRespnse(200, $response);
@@ -719,62 +749,6 @@ $app->delete('/car/:id', 'authenticate', function ($car_id) use ($app) {
     }
 });
 
-/**
- * Updating existing task
- * method PUT
- * params task, status
- * url - /tasks/:id
- */
-$app->put('/tasks/:id', 'authenticate', function ($task_id) use ($app) {
-    // check for required params
-    verifyRequiredParams(array('task', 'status'));
-
-    global $user_id;
-    $task = $app->request->put('task');
-    $status = $app->request->put('status');
-
-    $db = new DbHandler();
-    $response = array();
-
-    // updating task
-    $result = $db->updateTask($user_id, $task_id, $task, $status);
-    if ($result) {
-        // task updated successfully
-        $response["error"] = false;
-        $response["message"] = "Task updated successfully";
-        echoRespnse(200, $response);
-    } else {
-        // task failed to update
-        $response["error"] = true;
-        $response["message"] = "Task failed to update. Please try again!";
-        echoRespnse(200, $response);
-    }
-});
-
-/**
- * Deleting task. Users can delete only their tasks
- * method DELETE
- * url /tasks
- */
-$app->delete('/tasks/:id', 'authenticate', function ($task_id) use ($app) {
-    global $user_id;
-
-    $db = new DbHandler();
-    $response = array();
-    $result = $db->deleteTask($user_id, $task_id);
-    if ($result) {
-        // task deleted successfully
-        $response["error"] = false;
-        $response["message"] = "Task deleted succesfully";
-        echoRespnse(200, $response);
-    } else {
-        // task failed to delete
-        $response["error"] = true;
-        $response["message"] = "Task failed to delete. Please try again!";
-        echoRespnse(200, $response);
-    }
-});
-
 $app->post('/upload_car', 'authenticate', function () use ($app) {
     global $user_id;
     $base_url = $app->request->getUrl() . "/ezyride/assets/uploads/";
@@ -794,8 +768,254 @@ $app->post('/upload_car', 'authenticate', function () use ($app) {
     }
     echoRespnse(200, $response);
     $app->stop();
+});
 
+$app->post('/search_ride', 'authenticate', function () use ($app) {
+    global $user_id;
 
+    verifyRequiredParams(array('to_lat', 'to_long', 'from_lat', 'from_long'));
+    $response = array();
+    $to_lat = $app->request->post('to_lat');
+    $to_long = $app->request->post('to_long');
+    $from_lat = $app->request->post('from_lat');
+    $from_long = $app->request->post('from_long');
+    $date = $app->request->post('date');
+    $ride_date = date('Y-m-d', strtotime($date));
+
+    $db = new DbHandler();
+
+    $result = $db->search_from_ride($from_lat, $from_long, $ride_date);
+    if ($result) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $from_result[] = $row;
+        }
+    } else {
+        $responses['error'] = true;
+        $responses['message'] = 'No rides found';
+        echoRespnse(200, $responses);
+        $app->stop();
+    }
+
+    $result1 = $db->search_to_ride($to_lat, $to_long, $ride_date);
+
+    if ($result1) {
+        while ($row1 = mysqli_fetch_assoc($result1)) {
+            $to_result[] = $row1;
+        }
+    } else {
+        $responses['error'] = true;
+        $responses['message'] = 'No rides found';
+        echoRespnse(200, $responses);
+        $app->stop();
+    }
+    if (!empty($from_result) && !empty($to_result)) {
+        $intersect = array_uintersect($from_result, $to_result, 'compareDeepValue');
+        if (!empty($intersect)) {
+            $response["error"] = false;
+            $response["rides"] = array();
+            foreach ($intersect as $search) {
+                $rides = $db->getRidesByID($search['id']);
+                $rides1[] = $rides->fetch_assoc();
+            }
+            foreach ($rides1 as $rw) {
+                $tmp = array();
+                $tmp["id"] = $rw["id"];
+                $tmp["user_id"] = $rw["user_id"];
+                $tmp['user_image'] = $rw['profile_image'];
+                $tmp['username'] = $rw['first_name'];
+                $tmp["car_id"] = $rw["car_id"];
+                $tmp['car_no'] = $rw['car_no'];
+                $tmp["from_lat"] = $rw["from_lat"];
+                $tmp["from_long"] = $rw["from_long"];
+                $tmp["to_lat"] = $rw["to_lat"];
+                $tmp["to_long"] = $rw["to_long"];
+                $tmp["from_main_address"] = $rw["from_main_address"];
+                $tmp["from_sub_address"] = $rw["from_sub_address"];
+                $tmp["to_main_address"] = $rw["to_main_address"];
+                $tmp["to_sub_address"] = $rw["to_sub_address"];
+                $tmp["ride_date"] = $rw["ride_date"];
+                $tmp["ride_time"] = $rw["ride_time"];
+                $tmp["price_per_seat"] = $rw["price_per_seat"];
+                $tmp["seat_availability"] = $rw["seat_availability"];
+                $tmp["only_ladies"] = $rw["only_ladies"];
+                // changes on 18/07/2016
+                $tmp['user_gender'] = $rw['gender'];
+                $tmp['car_image'] = $rw['car_image'];
+                $tmp['seat_belt'] = $rw['seat_belt'];
+                $tmp['air_bag'] = $rw['air_bag'];
+                $tmp['ac_availability'] = $rw['ac_availability'];
+                $tmp['music_system'] = $rw['music_system'];
+                $tmp['car_layout'] = $rw['car_layout'];
+                $tmp['car_model'] = $rw['car_model'];
+                $tmp['pan_verify'] = $rw['pan_verify'];
+                $tmp['fb_verify'] = $rw['fb_verify'];
+                $tmp['corp_email_verify'] = $rw['corp_email_verify'];
+                $tmp['contact_verify'] = $rw['contact_verify'];
+                $tmp['age'] = $rw['age'];
+                $tmp['car_image'] = $rw['car_image'];
+                $tmp["creation_time"] = $rw["creation_time"];
+                $tmp["updation_time"] = $rw["updation_time"];
+
+                array_push($response["rides"], $tmp);
+            }
+            if (sizeof($rides1) > 0) {
+                echoRespnse(200, $response);
+                $app->stop();
+            } else {
+                $responses['error'] = true;
+                $responses['message'] = 'No rides found';
+                echoRespnse(200, $responses);
+                $app->stop();
+            }
+        } else {
+            $response['error'] = true;
+            $response['message'] = "No rides found";
+            echoRespnse(200, $response);
+            $app->stop();
+        }
+    } else {
+        $response['error'] = true;
+        $response['message'] = "No rides found";
+        echoRespnse(200, $response);
+        $app->stop();
+    }
+});
+
+$app->post('/my_rides', 'authenticate', function () use ($app) {
+    global $user_id;
+    // check for required params
+    verifyRequiredParams(array('date'));
+
+    $date = $app->request->post('date');
+    $ride_date = date('Y-m-d', strtotime($date));
+
+    $db = new DbHandler();
+
+    $result = $db->getAllRideByDate($user_id, $ride_date);
+
+    $response["error"] = false;
+    $response["rides"] = array();
+
+    // looping through result and preparing tasks array
+    while ($rides = $result->fetch_assoc()) {
+        $tmp = array();
+        $tmp["ride_id"] = $rides["id"];
+        $tmp["user_id"] = $rides["user_id"];
+        $tmp['user_image'] = $rides['profile_image'];
+        $tmp['username'] = $rides['first_name'];
+        $tmp["car_id"] = $rides["car_id"];
+        $tmp["from_lat"] = $rides["from_lat"];
+        $tmp["from_long"] = $rides["from_long"];
+        $tmp["to_lat"] = $rides["to_lat"];
+        $tmp["to_long"] = $rides["to_long"];
+        $tmp["from_main_address"] = $rides["from_main_address"];
+        $tmp["from_sub_address"] = $rides["from_sub_address"];
+        $tmp["to_main_address"] = $rides["to_main_address"];
+        $tmp["to_sub_address"] = $rides["to_sub_address"];
+        $tmp["ride_date"] = $rides["ride_date"];
+        $tmp["ride_time"] = $rides["ride_time"];
+        $tmp["price_per_seat"] = $rides["price_per_seat"];
+        $tmp["seat_availability"] = $rides["seat_availability"];
+        $tmp["only_ladies"] = $rides["only_ladies"];
+        $tmp["creation_time"] = $rides["creation_time"];
+        $tmp["updation_time"] = $rides["updation_time"];
+
+        array_push($response["rides"], $tmp);
+    }
+
+    if ($result->num_rows > 0) {
+        echoRespnse(200, $response);
+    } else {
+        $responses['error'] = true;
+        $responses['message'] = 'No Rides Found';
+        echoRespnse(200, $responses);
+    }
+
+});
+
+$app->get('/get_states', function () use ($app) {
+//    verifyRequiredParams(array('country'));
+//    $countryID = $app->request->post('country');
+
+    $db = new DbHandler();
+    $result = $db->get_states("101");
+
+    $response["error"] = false;
+    $response["states"] = array(array("id" => 0, "state_name" => "select state", "country_id" => 0));
+
+    // looping through result and preparing tasks array
+    while ($states = $result->fetch_assoc()) {
+        $tmp = array();
+        $tmp["id"] = $states["id"];
+        $tmp["state_name"] = $states["name"];
+        $tmp['country_id'] = $states['country_id'];
+        array_push($response["states"], $tmp);
+    }
+
+    if (sizeof($response["states"]) > 0) {
+        $response['error'] = false;
+        echoRespnse(200, $response);
+    } else {
+        $response1["error"] = true;
+        $response1['message'] = "No states found.";
+        echoRespnse(200, $response1);
+    }
+});
+
+$app->post('/get_city', function () use ($app) {
+    verifyRequiredParams(array('state'));
+    $stateID = $app->request->post('state');
+
+    $db = new DbHandler();
+    $result = $db->get_city($stateID);
+
+    $response["error"] = false;
+    $response["cities"] = array(array("id" => 0, "city_name" => "select city", "state_id" => 0));
+
+    // looping through result and preparing tasks array
+    while ($city = $result->fetch_assoc()) {
+        $tmp = array();
+        $tmp["id"] = $city["id"];
+        $tmp["city_name"] = $city["name"];
+        $tmp['state_id'] = $city['state_id'];
+        array_push($response["cities"], $tmp);
+    }
+
+    if (sizeof($response["cities"]) > 1) {
+        $response['error'] = false;
+        echoRespnse(200, $response);
+    } else {
+        $response1["error"] = true;
+        $response1['message'] = "No city found.";
+        echoRespnse(200, $response1);
+    }
+});
+
+$app->get('/auth', function () use ($app) {
+    // $access_key = $app->request->post('access_key');
+    //  $secret_key = $app->request->post('secret_key');
+    // header
+    $headers = array(
+        'Content-Type: application/json'
+    );
+    // Get cURL resource
+    $ch = curl_init();
+    // Set the url, number of POST vars, POST data
+    curl_setopt($ch, CURLOPT_URL, 'https://splitpaysbox.citruspay.com/marketplace/auth/');
+
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    // Disabling SSL Certificate support temporarly
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(array('access_key' => 'OG8OF2SZPIAK0EOP5HGR',
+        'secret_key' => 'fd8686928e68093612daafb834e252a8e21223c7')));
+// Close request to clear up some resources
+    $resp = curl_exec($ch);
+    curl_close($ch);
+    echo $resp;
 });
 
 $app->run();

@@ -48,9 +48,9 @@ class DbHandler
             $otp = rand(100000, 999999);
 
             // insert query
-            $stmt = $this->conn->prepare("INSERT INTO customers(first_name, last_name, email, contact, dob, gender,created_at,otp,api_key, status) VALUES(?,?,?,?,?,?,?,?,?,0)");
+            $stmt = $this->conn->prepare("INSERT INTO customers(first_name, email, contact, dob, gender,created_at,otp,api_key, status) VALUES(?,?,?,?,?,?,?,?,0)");
 
-            $stmt->bind_param("sssssssss", $fname, $lname, $email, $contact, $dob, $gender, $created_at, $otp, $api_key);
+            $stmt->bind_param("ssssssss", $fname, $email, $contact, $dob, $gender, $created_at, $otp, $api_key);
 
             $result = $stmt->execute();
 
@@ -74,13 +74,13 @@ class DbHandler
         return $response;
     }
 
-    public function updateUser($user_id, $fname, $contact, $dob, $pic,$gender,$fb_stat,$corp_mail,$pan,$pan_verify, $updated_at)
+    public function updateUser($user_id, $fname, $contact, $dob, $pic, $gender, $fb_stat, $corp_mail, $pan, $pan_verify, $address, $city_id, $city_name, $state_id, $state_name, $zip_code, $ifsc_code, $acc_no, $payout_mode, $updated_at)
     {
-        $sql = "UPDATE customers SET first_name = '".$fname."',contact = '".$contact."', dob = '".$dob."',profile_image = '".$pic."', gender = '".$gender."',fb_verify = '".$fb_stat."',corp_email_verify = '".$corp_mail."',pan = '".$pan."', pan_verify = '".$pan_verify."', updated_at = '".$updated_at."'  where id = '".$user_id."'";
-        $res = mysqli_query($this->conn,$sql);
-        if($res){
+        $sql = "UPDATE customers SET first_name = '" . $fname . "',contact = '" . $contact . "', dob = '" . $dob . "',profile_image = '" . $pic . "', gender = '" . $gender . "',fb_verify = '" . $fb_stat . "',corp_email_verify = '" . $corp_mail . "',pan = '" . $pan . "', pan_verify = '" . $pan_verify . "',address = '" . $address . "',country_name='India',city_id = '" . $city_id . "',city_name = '" . $city_name . "',state_id='" . $state_id . "',state_name = '" . $state_name . "',zip_code='" . $zip_code . "',ifsc_code='" . $ifsc_code . "',account_no='" . $acc_no . "',payout_mode='" . $payout_mode . "', updated_at = '" . $updated_at . "'  WHERE id = '" . $user_id . "'";
+        $res = mysqli_query($this->conn, $sql);
+        if ($res) {
             return true;
-        }else{
+        } else {
             return false;
         }
     }
@@ -194,9 +194,9 @@ class DbHandler
         }
     }
 
-    public function isPhoneExists($phone = NULL,$user_id)
+    public function isPhoneExists($phone = NULL, $user_id)
     {
-        $sql = "SELECT contact FROM customers WHERE contact = '" . $phone . "' AND id = '".$user_id."'";
+        $sql = "SELECT contact FROM customers WHERE contact = '" . $phone . "' AND id = '" . $user_id . "'";
         $result = mysqli_query($this->conn, $sql);
         $row = mysqli_num_rows($result);
         if ($row > 0) {
@@ -224,7 +224,7 @@ class DbHandler
 
     public function checkStatus($email = NULL)
     {
-        $sql = "SELECT status FROM customers WHERE email = '" . $email . "'";
+        $sql = "SELECT status,seller_id FROM customers WHERE email = '" . $email . "'";
         $result = mysqli_query($this->conn, $sql);
         $row = mysqli_num_rows($result);
         if ($row > 0) {
@@ -250,7 +250,7 @@ class DbHandler
      */
     public function getUserByEmail($email)
     {
-        $sql = "SELECT first_name,last_name,email,contact,api_key,status,created_at FROM customers WHERE email = '" . $email . "'";
+        $sql = "SELECT first_name,email,contact,api_key,status,seller_id,created_at FROM customers WHERE email = '" . $email . "'";
         $result = mysqli_query($this->conn, $sql);
         if ($result) {
             return $row = mysqli_fetch_assoc($result);
@@ -384,7 +384,7 @@ class DbHandler
      */
     public function getCar($car_id, $user_id)
     {
-        $stmt = $this->conn->prepare("SELECT car_details.*,customers.first_name,customers.last_name FROM car_details LEFT JOIN customers ON customers.id = car_details.user_id WHERE car_details.id = ? AND car_details.user_id = ?");
+        $stmt = $this->conn->prepare("SELECT car_details.*,customers.first_name FROM car_details LEFT JOIN customers ON customers.id = car_details.user_id WHERE car_details.id = ? AND car_details.user_id = ?");
         $stmt->bind_param("ii", $car_id, $user_id);
         if ($stmt->execute()) {
             $car = $stmt->get_result()->fetch_assoc();
@@ -500,6 +500,48 @@ class DbHandler
     }
 
     /**
+     * get all users rides by date
+     * @param $user_id
+     * @param $date
+     */
+    public function getUsersRides($user_id, $date)
+    {
+
+    }
+
+    /**
+     * get search ride by ride id
+     * @param $rides_id
+     * @return bool|mysqli_result
+     */
+    public function getRidesByID($rides_id)
+    {
+        $sql = "SELECT rides.*,customers.profile_image,customers.first_name,customers.fb_verify,customers.gender,customers.pan_verify,customers.corp_email_verify,customers.contact_verify,customers.dob,car_details.car_image,car_details.seat_belt,car_details.air_bag,car_details.ac_availability,car_details.car_no,car_details.music_system,car_details.car_layout,car_details.car_model,YEAR(CURDATE()) - YEAR(customers.dob) AS age FROM rides JOIN customers ON customers.id = rides.user_id JOIN car_details ON car_details.id = rides.car_id WHERE rides.id = '" . $rides_id . "'";
+        $result = mysqli_query($this->conn, $sql);
+        if ($result) {
+            return $result;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * get all ride by date
+     * @param $date
+     * @return bool|mysqli_result
+     */
+    public function getAllRideByDate($user_id, $date)
+    {
+        $sql = "SELECT rides.*,customers.profile_image,customers.first_name FROM rides JOIN customers ON customers.id = rides.user_id WHERE rides.ride_date = '" . $date . "' AND customers.id = '" . $user_id . "'";
+        $result = mysqli_query($this->conn, $sql);
+        if ($result) {
+            return $result;
+        } else {
+            return false;
+        }
+    }
+
+    /**
      *
      * @param type $user_id
      * @param type $rides_id
@@ -603,6 +645,75 @@ class DbHandler
         curl_close($ch);
         return true;
 
+    }
+
+    public function search_from_ride($lat, $long, $date)
+    {
+        /*Here's the SQL statement that will find the closest 20 locations that are within a radius of 25 miles to the 37, -122 coordinate. It calculates the distance based on the latitude/longitude of that row and the target latitude/longitude, and then asks for only rows where the distance value is less than 25, orders the whole query by distance, and limits it to 20 results. To search by kilometers instead of miles, replace 3959 with 6371.*/
+        // hervesine formula using mysql
+        /*SELECT id, ( 3959 * acos( cos( radians(37) ) * cos( radians( lat ) )
+                * cos( radians( lng ) - radians(-122) ) + sin( radians(37) ) * sin(radians(lat)) ) ) AS distance
+FROM markers
+HAVING distance < 25
+ORDER BY distance
+LIMIT 0 , 20;*/
+
+        $sql = "SELECT id, ( 6371 * acos( cos( radians($lat) ) * cos( radians( from_lat ) )
+                * cos( radians( from_long ) - radians($long) ) + sin( radians($lat) ) * sin(radians(from_lat)) ) ) AS distance,ride_time
+FROM rides WHERE ride_date = '" . $date . "'
+HAVING distance < 25
+ORDER BY ride_time";
+
+        $result = mysqli_query($this->conn, $sql);
+        if ($result) {
+            return $result;
+        } else {
+            return false;
+        }
+    }
+
+    public function search_to_ride($lat, $long, $date)
+    {
+        /*Here's the SQL statement that will find the closest 20 locations that are within a radius of 25 miles to the 37, -122 coordinate. It calculates the distance based on the latitude/longitude of that row and the target latitude/longitude, and then asks for only rows where the distance value is less than 25, orders the whole query by distance, and limits it to 20 results. To search by kilometers instead of miles, replace 3959 with 6371.*/
+        // hervesine formula using mysql
+        /*SELECT id, ( 3959 * acos( cos( radians(37) ) * cos( radians( lat ) )
+                * cos( radians( lng ) - radians(-122) ) + sin( radians(37) ) * sin(radians(lat)) ) ) AS distance
+FROM markers
+HAVING distance < 25
+ORDER BY distance
+LIMIT 0 , 20;*/
+
+        $sql = "SELECT id, ( 6371 * acos( cos( radians($lat) ) * cos( radians( to_lat ) )
+                * cos( radians( to_long ) - radians($long) ) + sin( radians($lat) ) * sin(radians(to_lat)) ) ) AS distance,ride_time FROM rides WHERE ride_date = '" . $date . "' HAVING distance < 25 ORDER BY ride_time";
+
+        $result = mysqli_query($this->conn, $sql);
+        if ($result) {
+            return $result;
+        } else {
+            return false;
+        }
+    }
+
+    public function get_states($countryID)
+    {
+        $sql = "SELECT * FROM states WHERE country_id = '" . $countryID . "'";
+        $result = mysqli_query($this->conn, $sql);
+        if ($result) {
+            return $result;
+        } else {
+            return false;
+        }
+    }
+
+    public function get_city($stateID)
+    {
+        $sql = "SELECT * FROM cities WHERE state_id = '" . $stateID . "'";
+        $result = mysqli_query($this->conn, $sql);
+        if ($result) {
+            return $result;
+        } else {
+            return false;
+        }
     }
 
 }

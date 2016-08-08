@@ -14,7 +14,7 @@
         <div class="col-sm-12">
             <section class="panel">
                 <header class="panel-heading">
-                    Car Detail
+                    Customers Detail
                     <!--<span class="tools pull-right">
                         <a href="" class="fa fa-plus"></a>
                     </span>-->
@@ -36,7 +36,7 @@
                                <?php if(!empty($result)){?>
                                 <?php foreach ($result as $cust_detail) { ?>
                                 <tr class="gradeX">
-                                    <td><?php echo $cust_detail->first_name." ".$cust_detail->last_name; ?></td>
+                                    <td><?php echo $cust_detail->first_name; ?></td>
                                     <td><?php echo $cust_detail->email; ?></td>
                                     <td><?php echo $cust_detail->contact; ?></td>
                                     <td><?php echo $cust_detail->corp_email; ?></td>
